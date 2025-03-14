@@ -174,3 +174,5 @@ pyrightconfig.json
 open-eqa/
 keys.txt
 .Trash-0/
+results
+results/*
