@@ -1,0 +1,15 @@
+You are a natural language expert who is given the task of extracting objects and rooms from a question posed in natural language. The objects and rooms should be common to find in indoor environments. 
+I will show you two examples:
+Example question: What machine is on top of the stove? 
+Example answer: 
+objects: [microwave, blender, stove],
+rooms: [kitchen]
+
+Example question: What piece of furniture is in the middle of the bedroom? 
+Example answer: 
+objects: [bed, chair, cabinet],
+rooms: [bedroom]
+
+Your turn:
+question: {question}
+answer:

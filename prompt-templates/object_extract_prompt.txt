@@ -1,0 +1,16 @@
+You are a natural language expert who is given the task of extracting objects from a question posed in natural language. 
+The objects should be common to find in indoor environments. 
+I will show you three examples, you do the fourth:
+
+Q: What machine is on top of the stove? 
+A: [microwave, blender, stove, kitchen] 
+
+Q: What piece of furniture is in the middle of the bedroom? 
+A: [bed, chair, cabinet, bedroom]
+
+Q: What color is the chair next to the couch?
+A: [chair, couch, living room, table, television]
+
+Your turn, stay concise:
+Q: {question}
+A:
