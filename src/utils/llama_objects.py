@@ -22,7 +22,6 @@ class llm_object_extractor:
         print(f"Loading prompt")
         self.prompt_template = self.load_prompt_template(prompt_path)
         print(f"Prompt loaded!")
-        #self.load_questions()
         self.DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.tokenizer = AutoTokenizer.from_pretrained(model_id)
         self.model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16).to(self.DEVICE)
@@ -50,28 +49,6 @@ class llm_object_extractor:
         else:
             return sorted(data)
         return sorted(episodes)
-        
-    
-    def load_questions(self):
-        episodes = self.get_unique_episodes()
-        '''
-        for each in episodes[:self.nr_scenes]:
-            temp_dict = {}
-            scene_questions = [item for item in questions if item['episode_history'] in each]
-            #print(scene_questions)
-            i = 0
-            for q in scene_questions:
-                q['objects'] = [i,i]
-                i += 1
-            filename = each.split('/')[-1]
-            with open(f"{output_path}{filename}.json", 'w') as f:
-                json.dump(scene_questions, f)
-            break
-        
-        curr_scene = "scannet-v0/" + "003"
-        scene_questions = df[df['episode_history'].str.contains(curr_scene)]
-        self.questions = scene_questions['question'].tolist()     
-        '''
 
     
     def get_model_result(self):
