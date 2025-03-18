@@ -1,6 +1,8 @@
 import os
 import json
+import copy
 import torch
+import pickle
 import argparse
 from tqdm import tqdm
 from PIL import Image, ImageDraw
@@ -16,6 +18,7 @@ CHECKPOINT = "google/owlv2-base-patch16-ensemble"
 SOURCE_IMAGE_PATH = "../eqa-test/scannet/frames/"
 OBJECT_PATH = "./results/open-eqa-llm-objects/"
 OUTPUT_PATH = "./results/od-llm-frame-selected/"
+VERBOSE_PATH = "./results/logging-llm/"
 
 # Set device
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -119,6 +122,31 @@ def get_sorted_frames(results, nrOfObjects):
                 frames.append((i, 0, 'no_object_found'))
     return frames
 
+# Project results onto images
+def project_results(results, imgs, text_queries):
+    img_copy = copy.deepcopy(imgs)
+
+    for i in range(len(imgs)):
+        draw = ImageDraw.Draw(img_copy[i])
+    
+        scores = results[i]["scores"].tolist()
+        labels = results[i]["labels"].tolist()
+        boxes = results[i]["boxes"].tolist()
+    
+        for box, score, label in zip(boxes, scores, labels):
+            xmin, ymin, xmax, ymax = box
+            draw.rectangle((xmin, ymin, xmax, ymax), outline="red", width=1)
+            draw.text((xmin, ymin), f"{text_queries[label]}: {round(score,2)}", fill="white")
+
+    return img_copy
+
+# Save images to path if needed
+def save_photos(imgs, path):
+    if not os.path.exists(path):
+        os.makedirs(path, exist_ok=True)
+    for i in range(len(imgs)):
+        imgs[i].save(f"{path}/{i}.png")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -135,7 +163,7 @@ if __name__ == "__main__":
     if args.dataset:
         questions = get_questions_from_directory(dataset=[args.dataset], object_path=args.object_path)[:args.nr_scenes]
     else:
-        questions = get_questions_from_directory()[:args.nr_scenes]
+        questions = get_questions_from_directory()[:args.nr_scenes] 
 
     # Load models
     model = AutoModelForZeroShotObjectDetection.from_pretrained(args.model_id).to(DEVICE)
@@ -154,6 +182,13 @@ if __name__ == "__main__":
             frame_scores = get_frame_scores(result)
             sorted_frames = get_sorted_frames(frame_scores, len(obj))
             scene[i][args.object_type + '_frames'] = sorted_frames
+            if args.verbose:
+                processed_imgs = project_results(result, imgs, obj)
+                output_verbose_path = f"{VERBOSE_PATH}/{scene_frame_path}/question{i}"
+                save_photos(processed_imgs, output_verbose_path)
+                output_verbose_path += ".pkl"
+                with open(output_verbose_path, 'wb') as f:
+                    pickle.dump(result, f)
 
         output_directory = OUTPUT_PATH + scene_frame_path + '.json'
         json.dump(scene, open(output_directory, "w"))
