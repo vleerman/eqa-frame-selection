@@ -15,6 +15,11 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 output_path = './results/open-eqa-llm-objects/'
 
+with open('keys.txt', 'r') as f:
+    for each in f.readlines():
+        key, value = each.split('=')
+        os.environ[key] = value.strip()
+
 class llm_object_extractor:
     def __init__(self, model_id, prompt_path, nr_scenes, dataset):
         self.nr_scenes = nr_scenes
