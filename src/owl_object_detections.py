@@ -158,7 +158,7 @@ if __name__ == "__main__":
     parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
     args = parser.parse_args()
 
-    print(vars(args))
+    #print(vars(args))
     # Get questions with object to look for
     if args.dataset:
         questions = get_questions_from_directory(dataset=[args.dataset], object_path=args.object_path)[:args.nr_scenes]

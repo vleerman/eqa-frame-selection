@@ -74,6 +74,9 @@ class llm_object_extractor:
                 object_list = [item.strip(' []') for item in objects[0].split(',')]
 
                 q['llm_objects'] = object_list
+
+                # Fix this, so it is nicer to store per inference made
+                q['method'] = 'Llama-2-7b-chat-hf'
                 
             filename = each.split('/')[-1]
             with open(f"{output_path}{filename}.json", 'w') as f:
