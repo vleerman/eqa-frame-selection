@@ -1,0 +1,34 @@
+You are a natural language expert who is given the task of extracting objects from a question posed in natural language.
+The objects should be common to find within indoor environments, so use common sense knowledge.
+In some questions there are no objects, use common sense reasoning what objects would be needed to answer the question.
+I will show you a couple examples, you only do the last one:
+
+Q: How can I water my plants?
+A: [hose, watering can, spray bottle, bucket]
+
+Q: What is between picture frame and glass?
+A  [picture frame, glass]
+
+Q: Where did I leave my suitcase?
+A: [suitcase]
+
+Q: Are the cabinets below the mirror closed?
+A: [cabinet, mirror, open cabinet, closed cabinet]
+
+Q: What can I eat?
+A: [food, fruit, vegetables, snacks]
+
+Q: How can I warm up dinner?
+A: [microwave, stove, oven]
+
+Q: What white object is kept underneath the table?
+A: [white object, table]
+
+Q: Where can I find the pencils? 
+A: [pencil, pencil case, pen holder] 
+
+Q: Where is the air conditioner?
+A: [air conditioner]
+
+Q: {question}
+A:

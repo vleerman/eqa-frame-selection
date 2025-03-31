@@ -16,9 +16,9 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 THRESHOLD = 0.2
 CHECKPOINT = "google/owlv2-base-patch16-ensemble"
 SOURCE_IMAGE_PATH = "../eqa-test/scannet/frames/"
-OBJECT_PATH = "./results/open-eqa-nlp-objects/"
-OUTPUT_PATH = "./results/od-nlp-frame-selected/"
-VERBOSE_PATH = "./results/logging-nlp/"
+OBJECT_PATH = "./results/open-eqa-llm_few_shot_llama3/"
+OUTPUT_PATH = "./results/od-llama3-frame-selected/"
+VERBOSE_PATH = "./results/logging-llama3/"
 
 # Set device
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -152,7 +152,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_id", default=CHECKPOINT, help="zero-shot object detection model to do inference")
     parser.add_argument("--object_path", default=OBJECT_PATH,help="path to object", type=str)
-    parser.add_argument("--object_type", default='nlp_objects', help="key to extract objects from, either llm_objects or nlp_objects")
+    parser.add_argument("--object_type", default='llm_objects', help="key to extract objects from, either llm_objects or nlp_objects")
     parser.add_argument("--nr_scenes", default=1, help="specify number of scenes", type=int)
     parser.add_argument("--dataset", help="specify dataset, can be either scannet or hm3d if empty, do both", type=str)
     parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
