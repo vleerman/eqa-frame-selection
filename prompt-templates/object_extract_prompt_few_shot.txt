@@ -7,7 +7,7 @@ Q: How can I water my plants?
 A: [hose, watering can, spray bottle, bucket]
 
 Q: What is between picture frame and glass?
-A  [picture frame, glass]
+A: [picture frame, glass]
 
 Q: Where did I leave my suitcase?
 A: [suitcase]

@@ -24,15 +24,20 @@ VERBOSE_PATH = "./results/logging-llama3/"
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Get json from scannet/hm3d with objects to look for
-def get_questions_from_directory(dataset = ['scannet', 'hm3d'], object_path = OBJECT_PATH):
+def get_questions_from_directory(dataset = ['scannet', 'hm3d'], object_path = OBJECT_PATH, output_path = OUTPUT_PATH,overwrite=False):
+    skip = []
+    if not overwrite:
+        skip = [x for x in os.listdir(output_path) if x.endswith('.json')]
+        
     questions_per_scene = []
     if len(dataset) == 2:
         for each in os.listdir(object_path):
             if each.endswith('.json'):
+                # Implement for whole dataset to do
                 print(each)
     else:
         for each in os.listdir(object_path):
-            if each.endswith('.json') and dataset[0] in each:
+            if each.endswith('.json') and (dataset[0] in each) and (each not in skip):
                 with open(object_path + each, 'r') as f:
                     questions_per_scene.append(json.load(f))
 

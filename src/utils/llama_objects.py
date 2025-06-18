@@ -46,7 +46,9 @@ class llm_object_extractor:
     def get_unique_episodes(self):
         self.questions = json.load(open("open-eqa/data/open-eqa-v0.json"))
         unique_history = set([question['episode_history'] for question in self.questions])
-        data = list(unique_history)
+        done = set(x.split('.json')[0] for x in os.listdir(output_path) if x.endswith('json'))
+        data = [x for x in unique_history if x.split('/')[1] not in done]
+
         episodes = []  
         
         if self.dataset != 'both':
