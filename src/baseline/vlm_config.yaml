@@ -1,0 +1,17 @@
+# General
+seed: 42
+exp_name: prismatic_vlm_exp
+output_parent_dir: results
+questions_path: open-eqa/data/open-eqa-v0.json # Path to open-eqa questions
+image_dir: scannet/frames # Path to the scannet frames
+
+# Question answering
+vlm:
+  hf_token:  # Add your own hugging_face token
+  device: cuda
+  model_id: prism-dinosiglip+7b
+
+# Image
+img_width: 1296
+img_height: 968
+num_frames: 30
