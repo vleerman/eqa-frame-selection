@@ -176,3 +176,5 @@ keys.txt
 .Trash-0/
 results
 results/*
+docker
+docker/*
