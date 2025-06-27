@@ -1,6 +1,5 @@
 import os
 import re
-import argparse
 import json
 import torch
 import transformers
@@ -9,11 +8,7 @@ from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from transformers import set_seed
 
-set_seed(42)
-
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-output_path = './results/open-eqa-llm_few_shot_llama3/'
 
 with open('keys.txt', 'r') as f:
     for each in f.readlines():
@@ -21,9 +16,9 @@ with open('keys.txt', 'r') as f:
         os.environ[key] = value.strip()
 
 class llm_object_extractor:
-    def __init__(self, model_id, prompt_path, nr_scenes, dataset):
-        self.nr_scenes = nr_scenes
+    def __init__(self, model_id, prompt_path, output_path, dataset):
         self.dataset = dataset
+        self.output_path = output_path
         print(f"Loading prompt")
         self.prompt_template = self.load_prompt_template(prompt_path)
         print(f"Prompt loaded!")
@@ -46,24 +41,22 @@ class llm_object_extractor:
     def get_unique_episodes(self):
         self.questions = json.load(open("open-eqa/data/open-eqa-v0.json"))
         unique_history = set([question['episode_history'] for question in self.questions])
-        done = set(x.split('.json')[0] for x in os.listdir(output_path) if x.endswith('json'))
+        done = set(x.split('.json')[0] for x in os.listdir(self.output_path) if x.endswith('json'))
         data = [x for x in unique_history if x.split('/')[1] not in done]
 
         episodes = []  
         
-        if self.dataset != 'both':
-            for each in data:
-              if self.dataset in each:
+        for each in data:
+            if self.dataset in each:
                 episodes.append(each)
-        else:
-            return sorted(data)
+                
         return sorted(episodes)
 
     
     def get_model_result(self, method, verbose=False):
         episodes = self.get_unique_episodes()
         
-        for each in tqdm(episodes[:self.nr_scenes]):
+        for each in tqdm(episodes):
             temp_dict = {}
             scene_questions = [item for item in self.questions if item['episode_history'] == each]
             for q in scene_questions:
@@ -82,12 +75,10 @@ class llm_object_extractor:
                 object_list = [item.strip(' []') for item in objects[0].split(',')]
 
                 q['llm_objects'] = object_list
-
-                # Fix this, so it is nicer to store per inference made
                 q['method'] = method
                 
             filename = each.split('/')[-1]
-            with open(f"{output_path}{filename}.json", 'w') as f:
+            with open(f"{self.output_path}{filename}.json", 'w') as f:
                 json.dump(scene_questions, f)
                 
 
@@ -96,18 +87,23 @@ class llm_object_extractor:
         return re.findall(r"\[[^\]]*\]", llm_output)[-nrOfLists:]
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("model_id", help="llm model to do inference")
-    parser.add_argument("prompt_path", help="path to prompt template")
-    parser.add_argument("--nr_scenes", default=5, help="specify number of scenes", type=int)
-    parser.add_argument("--dataset", default='scannet-v0', help="specify dataset, can be either scannet-v0 or hm3d", type=str)
-    parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
-    args = parser.parse_args()
+    import argparse
+    from omegaconf import OmegaConf
 
-    method = args.model_id.split("/")[-1]
+    # get config path
+    args = argparse.Namespace()
+    args.cfg_file = "src/local_config.yaml"
+    cfg = OmegaConf.load(args.cfg_file)
+    OmegaConf.resolve(cfg)
+
+    set_seed(cfg.seed)
+
+    os.environ['hf_token'] = cfg.hf_token
+
+    method = cfg.llama_model_id.split("/")[-1]
     
-    llm = llm_object_extractor(args.model_id, args.prompt_path, args.nr_scenes, args.dataset)
-    llm.get_model_result(method, args.verbose)
+    llm = llm_object_extractor(cfg.llama_model_id, cfg.llama_prompt_path, cfg.llama_output_path, 'scannet-v0')
+    llm.get_model_result(method, cfg.verbose)
     print('Done')
     
     

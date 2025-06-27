@@ -1,0 +1,27 @@
+# General
+seed: 42
+verbose: False
+threshold: 0.2
+nr_scenes: 3
+questions_path: open-eqa/data/open-eqa-v0.json # Path to open-eqa questions
+
+# paths
+model_id: google/owlv2-base-patch16-ensemble
+image_path: # Path to images
+object_path: results/open-eqa-llm_few_shot_llama3/
+output_path: results/od-llama5-frame-selected/
+verbose_path: results/logging-llama5/
+
+# Image
+img_width: 1296
+img_height: 968
+num_frames: 30
+
+# Text
+llama_model_id: meta-llama/Llama-3.1-8B-Instruct
+llama_prompt_path: prompt-templates/object_extract_prompt_few_shot.txt
+llama_output_path: results/open-eqa-llm_few_shot_llama5/
+object_type: llm_objects # key where objects are stored, for nlp use nlp_objects, for llm use llm_objects
+
+# Keys
+hf_token: # Add personal token

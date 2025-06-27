@@ -3,43 +3,24 @@ import json
 import copy
 import torch
 import pickle
-import argparse
 from tqdm import tqdm
 from PIL import Image, ImageDraw
 from transformers import AutoProcessor, AutoModelForZeroShotObjectDetection
 from transformers import set_seed
 
-set_seed(42)
-
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-THRESHOLD = 0.2
-CHECKPOINT = "google/owlv2-base-patch16-ensemble"
-SOURCE_IMAGE_PATH = "../eqa-test/scannet/frames/"
-OBJECT_PATH = "./results/open-eqa-llm_few_shot_llama3/"
-OUTPUT_PATH = "./results/od-llama3-frame-selected/"
-VERBOSE_PATH = "./results/logging-llama3/"
-
-# Set device
-DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-# Get json from scannet/hm3d with objects to look for
-def get_questions_from_directory(dataset = ['scannet', 'hm3d'], object_path = OBJECT_PATH, output_path = OUTPUT_PATH,overwrite=False):
+# Get json from scannet with objects to look for
+def get_questions_from_directory(object_path, output_path, overwrite=False):
     skip = []
     if not overwrite:
         skip = [x for x in os.listdir(output_path) if x.endswith('.json')]
         
     questions_per_scene = []
-    if len(dataset) == 2:
-        for each in os.listdir(object_path):
-            if each.endswith('.json'):
-                # Implement for whole dataset to do
-                print(each)
-    else:
-        for each in os.listdir(object_path):
-            if each.endswith('.json') and (dataset[0] in each) and (each not in skip):
-                with open(object_path + each, 'r') as f:
-                    questions_per_scene.append(json.load(f))
+    for each in os.listdir(object_path):
+        if each.endswith('.json') and ("scannet" in each) and (each not in skip):
+            with open(object_path + each, 'r') as f:
+                questions_per_scene.append(json.load(f))
 
     return questions_per_scene
 
@@ -67,13 +48,9 @@ def load_full_episode(epi_path):
 '''
 Takes as input a set of images, list of text_queries, model checkpoint and batch_size
 '''
-def object_detection(imgs, text_queries, batch_size=4):
+def object_detection(imgs, text_queries, threshold, batch_size=4):
     all_results = []
-    #target_sizes = torch.Tensor([[max(h,w), max(h,w)]])
 
-    # model and processor are set below
-
-    # Implemented batches
     for i in range(0, len(imgs), batch_size):
 
         batch_imgs = imgs[i:i+batch_size]
@@ -83,7 +60,7 @@ def object_detection(imgs, text_queries, batch_size=4):
         inputs = processor(text=text_queries*batch_size, images=batch_imgs, return_tensors="pt").to(DEVICE)
         with torch.no_grad():
             outputs = model(**inputs)
-            results = processor.post_process_grounded_object_detection(outputs, threshold=THRESHOLD, target_sizes=target_sizes)
+            results = processor.post_process_grounded_object_detection(outputs, threshold=threshold, target_sizes=target_sizes)
             all_results.extend(results)
 
     return all_results
@@ -154,57 +131,50 @@ def save_photos(imgs, path):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--model_id", default=CHECKPOINT, help="zero-shot object detection model to do inference")
-    parser.add_argument("--object_path", default=OBJECT_PATH,help="path to object", type=str)
-    parser.add_argument("--object_type", default='llm_objects', help="key to extract objects from, either llm_objects or nlp_objects")
-    parser.add_argument("--nr_scenes", default=1, help="specify number of scenes", type=int)
-    parser.add_argument("--dataset", help="specify dataset, can be either scannet or hm3d if empty, do both", type=str)
-    parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
-    args = parser.parse_args()
+    import argparse
+    from omegaconf import OmegaConf
 
-    #print(vars(args))
-    # Get questions with object to look for
-    if args.dataset:
-        questions = get_questions_from_directory(dataset=[args.dataset], object_path=args.object_path)[:args.nr_scenes]
-    else:
-        questions = get_questions_from_directory()[:args.nr_scenes] 
+    # get config path
+    args = argparse.Namespace()
+    args.cfg_file = "src/local_config.yaml"
+    cfg = OmegaConf.load(args.cfg_file)
+    OmegaConf.resolve(cfg)
 
-    # Load models
-    model = AutoModelForZeroShotObjectDetection.from_pretrained(args.model_id).to(DEVICE)
-    processor = AutoProcessor.from_pretrained(args.model_id)
+    set_seed(cfg.seed)
     
+    # Get questions with object to look for
+    questions = get_questions_from_directory(object_path=cfg.object_path, output_path=cfg.output_path, overwrite=True)[:cfg.nr_scenes] 
+
+    # Load models, Set device
+    DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = AutoModelForZeroShotObjectDetection.from_pretrained(cfg.model_id).to(DEVICE)
+    processor = AutoProcessor.from_pretrained(cfg.model_id)
+
     # For each scene, extract all objects and get images, detect and sort detections and save json
     # if verbose, save the scene_detections and images with bounding boxes
     for scene in tqdm(questions):
-        objects = get_objects_per_scene(scene, args.object_type)
+        objects = get_objects_per_scene(scene, cfg.object_type)
         scene_frame_path = scene[0]['episode_history'].split('/')[-1]
-        imgs, w, h = load_full_episode(SOURCE_IMAGE_PATH + scene_frame_path)
+        imgs, w, h = load_full_episode(cfg.image_path + scene_frame_path)
         scene_detections = []
         for i, obj in tqdm(enumerate(objects), leave=False):
             if len(obj) == 0:
-                scene[i][args.object_type + '_frames'] = 'No_Objects_Extracted'
+                scene[i][cfg.object_type + '_frames'] = 'No_Objects_Extracted'
                 continue
-            result = object_detection(imgs, obj)
+            result = object_detection(imgs, obj, cfg.threshold)
             scene_detections.append(result)
             frame_scores = get_frame_scores(result)
             sorted_frames = get_sorted_frames(frame_scores, len(obj))
-            scene[i][args.object_type + '_frames'] = sorted_frames
-            if args.verbose:
+            scene[i][cfg.object_type + '_frames'] = sorted_frames
+            if cfg.verbose:
                 processed_imgs = project_results(result, imgs, obj)
-                output_verbose_path = f"{VERBOSE_PATH}/{scene_frame_path}/question{i}"
+                output_verbose_path = f"{cfg.verbose_path}/{scene_frame_path}/question{i}"
                 save_photos(processed_imgs, output_verbose_path)
                 output_verbose_path += ".pkl"
                 with open(output_verbose_path, 'wb') as f:
                     pickle.dump(result, f)
 
-        output_directory = OUTPUT_PATH + scene_frame_path + '.json'
+        output_directory = cfg.output_path + scene_frame_path + '.json'
         json.dump(scene, open(output_directory, "w"))
       
-    #print(questions[:args.nr_scenes])   
     print('Done')
-    
-else:
-    # Load models
-    model = AutoModelForZeroShotObjectDetection.from_pretrained(CHECKPOINT).to(DEVICE)
-    processor = AutoProcessor.from_pretrained(CHECKPOINT)

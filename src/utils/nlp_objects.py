@@ -9,26 +9,23 @@ nltk.download('stopwords')
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-output_path = './results/open-eqa-nlp-objects/'
-
 class nlp_object_extractor:
-    def __init__(self, nr_scenes, dataset):
+    def __init__(self, dataset, questions_path, output_path):
         self.nlp = spacy.load("en_core_web_sm")
-        self.nr_scenes = nr_scenes
         self.dataset = dataset
+        self.question_path = questions_path
+        self.output_path = output_path
     
     def get_unique_episodes(self):
-        self.questions = json.load(open("open-eqa/data/open-eqa-v0.json"))
+        self.questions = json.load(open(self.question_path))
         unique_history = set([question['episode_history'] for question in self.questions])
         data = list(unique_history)
         episodes = []  
         
-        if self.dataset != 'both':
-            for each in data:
-              if self.dataset in each:
+        for each in data:
+            if self.dataset in each:
                 episodes.append(each)
-        else:
-            return sorted(data)
+
         return sorted(episodes)
 
 
@@ -72,28 +69,26 @@ class nlp_object_extractor:
     def get_nlp_result(self):
         episodes = self.get_unique_episodes()
         
-        for each in episodes[:self.nr_scenes]:
+        for each in episodes:
             scene_questions = [item for item in self.questions if item['episode_history'] == each]
             for q in scene_questions:
                 objects = self.get_objects(q['question'])
                 
                 q['nlp_objects'] = objects
-
-                # Fix this, so it is nicer to store per inference made
                 q['method'] = 'nlp'
                 
             filename = each.split('/')[-1]
-            with open(f"{output_path}{filename}.json", 'w') as f:
+            with open(f"{self.output_path}{filename}.json", 'w') as f:
                 json.dump(scene_questions, f)
                 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--nr_scenes", default=5, help="specify number of scenes", type=int)
-    parser.add_argument("--dataset", default='scannet-v0', help="specify dataset, can be either scannet-v0 or hm3d", type=str)
+    parser.add_argument("--question_path", default="open-eqa/data/open-eqa-v0.json", help="specify path to questions", type=str)
+    parser.add_argument("--output_path", default='./results/open-eqa-nlp-objects/', help="specify output_path", type=str)
     args = parser.parse_args()
     
-    obj_extractor = nlp_object_extractor(args.nr_scenes, args.dataset)
+    obj_extractor = nlp_object_extractor('scannet-v0', args.question_path, args.output_path)
     obj_extractor.get_nlp_result()
     print('Done')
 
