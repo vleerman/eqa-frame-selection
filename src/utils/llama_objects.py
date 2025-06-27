@@ -10,11 +10,6 @@ from transformers import set_seed
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-with open('keys.txt', 'r') as f:
-    for each in f.readlines():
-        key, value = each.split('=')
-        os.environ[key] = value.strip()
-
 class llm_object_extractor:
     def __init__(self, model_id, prompt_path, output_path, dataset):
         self.dataset = dataset
@@ -23,9 +18,9 @@ class llm_object_extractor:
         self.prompt_template = self.load_prompt_template(prompt_path)
         print(f"Prompt loaded!")
         self.DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.tokenizer = AutoTokenizer.from_pretrained(model_id)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_id, token=os.environ['hf_token'])
         self.eos = self.tokenizer("Q: ")["input_ids"]
-        self.model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16).to(self.DEVICE)
+        self.model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, token=os.environ['hf_token']).to(self.DEVICE)
         self.model.eval()
 
     
